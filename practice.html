@@ -1,0 +1,2355 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RxCraft</title>
+  <style>
+    :root{
+      --bg:#0b0f1a;
+      --panel:rgba(255,255,255,.06);
+      --stroke:rgba(255,255,255,.14);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.65);
+      --accent:rgba(255, 212, 74, .20);
+      --accentStroke:rgba(255, 212, 74, .35);
+      --good:rgba(110, 231, 255, .95);
+      --bad:rgba(255, 143, 143, .95);
+      --radius:18px;
+      --shadow: 0 14px 34px rgba(0,0,0,.35);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 600px at 20% 10%, rgba(79, 173, 255, .14), transparent 55%),
+        radial-gradient(900px 600px at 80% 20%, rgba(255, 212, 74, .10), transparent 60%),
+        var(--bg);
+      overflow:hidden;
+    }
+
+    /* START SCREEN */
+    .startScreen{
+      position:fixed; inset:0;
+      display:grid; place-items:center;
+      padding:20px;
+      z-index:50;
+    }
+    .startCard{
+      width:min(560px, 94vw);
+      background:var(--panel);
+      border:1px solid var(--stroke);
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      padding:26px 24px 18px;
+      text-align:center;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .startTitle{font-size:30px;font-weight:950;letter-spacing:.3px}
+    .startSub{margin-top:4px;color:var(--muted);font-size:13px;line-height:1.5;white-space:pre-line}
+    .startBtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+    .playBtn{
+      border:1px solid var(--accentStroke);
+      background:var(--accent);
+      color:var(--text);
+      font-weight:950;
+      padding:12px 16px;
+      border-radius:16px;
+      cursor:pointer;
+      font-size:14px;
+      min-width:140px;
+    }
+    .playBtn:hover{filter:brightness(1.1)}
+    .playBtn:active{transform:scale(.99)}
+    .startSig{
+      margin-top:10px;
+      font-size:11px;
+      color:rgba(255,255,255,.55);
+    }
+
+    /* APP */
+    .app{display:none;height:100%;width:100%}
+
+    /* TOPBAR now 3-column layout (left brand / center logo / right buttons) */
+    .topbar{
+      position:fixed;
+      left:0; right:0; top:0;
+      display:grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items:center;
+      gap:12px;
+      padding:12px 14px;
+      background:rgba(11,15,26,.78);
+      border-bottom:1px solid var(--stroke);
+      backdrop-filter: blur(10px);
+      z-index:10;
+    }
+    .brand{display:flex; align-items:center; gap:10px; justify-self:start}
+    .logo{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;
+      background:rgba(255,255,255,.07);border:1px solid var(--stroke)}
+    .title{font-weight:950}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:2px}
+
+    /* Center logo button */
+    .topLogoBtn{
+      justify-self:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:6px 10px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      text-decoration:none;
+      cursor:pointer;
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+    .topLogoBtn:hover{
+      transform: scale(1.10);
+      background: rgba(255,255,255,.06);
+      border-color: rgba(255,255,255,.16);
+    }
+    .topLogoImg{
+      height: 26px;
+      width:auto;
+      display:block;
+      object-fit:contain;
+    }
+
+    .topRight{display:flex; align-items:center; gap:10px; justify-self:end}
+    .toast{
+      font-size:12px;
+      color:var(--muted);
+      min-height:18px;
+      text-align:right;
+      max-width: 44vw;
+    }
+    .iconBtn{
+      height:38px;
+      border-radius:14px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      font-size:16px;
+      padding:0 10px;
+    }
+    .iconBtn:hover{background:rgba(255,255,255,.10)}
+    .iconBtn:active{transform:scale(.99)}
+
+    /* Reference library button with label */
+    .refBtn{
+      width:auto;
+      padding:0 12px;
+      gap:8px;
+      display:flex;
+      align-items:center;
+    }
+    .refIcon{font-size:16px; line-height:1}
+    .refText{
+      font-size:12px;
+      font-weight:950;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.86);
+      text-transform: lowercase;
+      white-space:nowrap;
+    }
+
+    .main{
+      position:fixed;
+      left:0; right:0;
+      top:64px; bottom:0;
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap:12px;
+      padding:12px;
+    }
+
+    /* CANVAS */
+    .canvasWrap{
+      position:relative;
+      border-radius: var(--radius);
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+      box-shadow: var(--shadow);
+      overflow: visible;
+    }
+    .canvasHint{
+      position:absolute;
+      left:14px; top:14px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: rgba(255,255,255,.60);
+      font-size:12px;
+      user-select:none;
+      pointer-events:none;
+      z-index:1;
+    }
+
+    /* Right sidebar */
+    .sidebar{display:flex;flex-direction:column;gap:12px;min-height:0}
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--stroke);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .panelHead{
+      padding:12px 14px;
+      border-bottom:1px solid var(--stroke);
+      background:rgba(255,255,255,.04);
+    }
+    .panelTitle{font-weight:950}
+    .panelSub{font-size:12px;color:var(--muted);margin-top:2px}
+    .list{
+      padding:10px;
+      display:grid;
+      gap:8px;
+      overflow:auto;
+      min-height:0;
+    }
+
+    /* Sidebar items wrap properly */
+    .itemBtn{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 10px;
+      border-radius:14px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      cursor:pointer;
+      user-select:none;
+      transition: transform 120ms ease, background 120ms ease;
+    }
+    .itemBtn:hover{transform:translateY(-1px); background:rgba(255,255,255,.09)}
+    .itemBtn:active{transform:scale(.99)}
+    .itemLeft{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      min-width:0;
+      flex:1;
+    }
+    .itemIcon{
+      font-size:18px;
+      width:28px;
+      text-align:center;
+      flex:0 0 28px;
+      line-height:1.1;
+      margin-top:1px;
+    }
+    .itemName{
+      font-weight:950;
+      white-space:normal;
+      overflow-wrap:anywhere;
+      line-height:1.15;
+    }
+    .itemTag{
+      font-size:11px;
+      color:rgba(255,255,255,.72);
+      padding:5px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      white-space:normal;
+      text-align:right;
+      line-height:1.1;
+      flex:0 0 auto;
+      max-width: 42%;
+      overflow-wrap:anywhere;
+    }
+
+    /* Discovered tabs */
+    .tabsRow{
+      display:flex;
+      gap:8px;
+      padding:10px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      overflow:auto;
+    }
+    .tabBtn{
+      flex:0 0 auto;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.78);
+      font-size:12px;
+      font-weight:950;
+      cursor:pointer;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .tabBtn:hover{ background: rgba(255,255,255,.10); }
+    .tabBtn.active{
+      background: rgba(255, 212, 74, .16);
+      border-color: rgba(255, 212, 74, .35);
+      color: rgba(255,255,255,.92);
+    }
+
+    /* Trash */
+    .trashDrop{
+      padding:12px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      border-top:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      user-select:none;
+    }
+    .trashZone{
+      flex:1;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px dashed rgba(255, 143, 143, .35);
+      background: rgba(255, 143, 143, .08);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      color: rgba(255, 215, 215, .92);
+      font-weight:950;
+      font-size:12px;
+    }
+    .trashZone.hot{
+      border-style:solid;
+      background: rgba(255, 143, 143, .14);
+      transform: translateY(-1px);
+    }
+
+    /* Nodes */
+    .node{
+      position:absolute;
+      width: 92px;
+      height: 92px;
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      box-shadow: 0 12px 26px rgba(0,0,0,.28);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      user-select:none;
+      touch-action:none;
+      transform-origin: 50% 20%;
+      will-change: transform;
+      z-index:2;
+      text-align:center;
+      transition: border-color 120ms ease, background 120ms ease;
+    }
+    .node .ico{font-size:22px; line-height:1}
+    .node .txt{
+      font-size:11px;
+      font-weight:950;
+      opacity:.95;
+      padding:0 6px;
+      white-space:normal;
+      line-height:1.05;
+    }
+    .node.pickedUp{
+      filter: brightness(1.06);
+      box-shadow: 0 22px 44px rgba(0,0,0,.48);
+    }
+
+    /* invalid highlight + jitter */
+    .node.invalid{
+      border-color: rgba(255, 90, 90, .60);
+      background: rgba(255, 90, 90, .12);
+    }
+    .node.jitter{
+      animation: jitter 120ms ease-in-out 0s 8;
+    }
+    @keyframes jitter{
+      0%{transform: translate3d(var(--x,0px), var(--y,0px), 0) rotate(-2deg) scale(1.02)}
+      50%{transform: translate3d(calc(var(--x,0px) + 2px), calc(var(--y,0px) - 2px), 0) rotate(2deg) scale(1.02)}
+      100%{transform: translate3d(var(--x,0px), var(--y,0px), 0) rotate(-2deg) scale(1.02)}
+    }
+
+    /* Poof spawn */
+    .poof{animation: poof 260ms ease-out;}
+    @keyframes poof{
+      0%{transform: translate3d(var(--x,0px), var(--y,0px), 0) scale(.65); opacity:0}
+      70%{transform: translate3d(var(--x,0px), var(--y,0px), 0) scale(1.08); opacity:1}
+      100%{transform: translate3d(var(--x,0px), var(--y,0px), 0) scale(1); opacity:1}
+    }
+
+    /* Drop impact */
+    .impact{animation: impact 180ms ease-out;}
+    @keyframes impact{
+      0%{transform: translate3d(var(--x,0px), var(--y,0px), 0) scale(1.06)}
+      70%{transform: translate3d(var(--x,0px), var(--y,0px), 0) scale(.97)}
+      100%{transform: translate3d(var(--x,0px), var(--y,0px), 0) scale(1)}
+    }
+
+    /* Pop for combination result */
+    .pop{animation: pop 220ms cubic-bezier(.2,.95,.2,1);}
+    @keyframes pop{
+      0%{transform: translate3d(var(--x,0px), var(--y,0px), 0) scale(.78); opacity:.92}
+      70%{transform: translate3d(var(--x,0px), var(--y,0px), 0) scale(1.12); opacity:1}
+      100%{transform: translate3d(var(--x,0px), var(--y,0px), 0) scale(1); opacity:1}
+    }
+
+    /* Rotating ring glow around NEW discoveries */
+    .ringGlow::before{
+      content:"";
+      position:absolute;
+      inset:-8px;
+      border-radius: 28px;
+      background:
+        conic-gradient(from 0deg,
+          rgba(255,212,74,.05),
+          rgba(255,212,74,.85),
+          rgba(110,231,255,.65),
+          rgba(255,212,74,.05)
+        );
+      -webkit-mask:
+        radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+      mask:
+        radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+      filter: blur(.2px) drop-shadow(0 0 14px rgba(255,212,74,.35));
+      opacity:.95;
+      animation: ringSpin 900ms linear infinite;
+      pointer-events:none;
+    }
+    .ringGlow{
+      box-shadow:
+        0 0 0 2px rgba(255, 212, 74, .16),
+        0 0 26px rgba(255, 212, 74, .25),
+        0 22px 44px rgba(0,0,0,.48);
+    }
+    @keyframes ringSpin{ to{ transform: rotate(360deg); } }
+
+    /* Tutorial overlay */
+    #tutorialOverlay{
+      position:fixed;
+      inset:0;
+      z-index:9000;
+      display:none;
+      pointer-events:none;
+    }
+    .tShade{ position:fixed; background: rgba(0,0,0,.62); inset:0; pointer-events:none; }
+    .tShade.part{ inset:auto; pointer-events:none; }
+    .tBubble{
+      position:fixed;
+      max-width:min(380px, 92vw);
+      background: rgba(255,255,255,.09);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 18px;
+      box-shadow: 0 18px 44px rgba(0,0,0,.45);
+      padding: 12px 12px;
+      backdrop-filter: blur(10px);
+      pointer-events:auto;
+    }
+    .tHeadRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .tTitle{font-weight:950; font-size:14px}
+    .tSkip{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.84);
+      font-size:12px;
+      padding:7px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:900;
+      user-select:none;
+    }
+    .tSkip:hover{ background: rgba(255,255,255,.10); }
+    .tText{margin-top:8px; color: rgba(255,255,255,.76); font-size:12px; line-height:1.35; white-space:pre-line}
+    .tHint{margin-top:8px; color: rgba(255,255,255,.55); font-size:11px}
+    .tActions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;}
+    .tNext{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.08);
+      color: rgba(255,255,255,.90);
+      font-size:12px;
+      padding:8px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:950;
+      user-select:none;
+    }
+    .tNext:hover{ background: rgba(255,255,255,.12); }
+    .tNext[disabled]{ opacity:.5; cursor:not-allowed; }
+
+    /* Context menu */
+    #ctxMenu{
+      position:fixed;
+      z-index:100000;
+      display:none;
+      min-width:180px;
+      background: rgba(15,20,34,.92);
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:14px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.55);
+      overflow:hidden;
+      backdrop-filter: blur(10px);
+    }
+    .ctxItem{
+      padding:10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      cursor:pointer;
+      user-select:none;
+      color: rgba(255,255,255,.86);
+      font-size:13px;
+    }
+    .ctxItem:hover{ background: rgba(255,255,255,.08); }
+    .ctxSep{ height:1px; background: rgba(255,255,255,.10); }
+    .ctxRight{ color: rgba(255,255,255,.55); font-size:12px; }
+
+    /* Learn more modal (over everything, including encyclopedia) */
+    #learnOverlay{
+      position:fixed;
+      inset:0;
+      z-index:100100;
+      display:none;
+      background: rgba(0,0,0,.58);
+      backdrop-filter: blur(8px);
+    }
+    .learnCard{
+      position:absolute;
+      left:50%; top:50%;
+      transform: translate(-50%,-50%);
+      width: min(980px, 94vw);
+      height: min(560px, 84vh);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      box-shadow: 0 24px 70px rgba(0,0,0,.65);
+      overflow:hidden;
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+    }
+    .learnLeft{
+      padding:18px;
+      border-right:1px solid rgba(255,255,255,.10);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:0;
+    }
+    .learnTitle{font-size:18px;font-weight:950;letter-spacing:.2px}
+    .learnMeta{
+      margin-top:6px;
+      color: rgba(255,255,255,.70);
+      font-size:12px;
+      line-height:1.4;
+      white-space:pre-line;
+    }
+    .learnDesc{
+      margin-top:10px;
+      flex:1;
+      min-height:0;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.78);
+      font-size:13px;
+      line-height:1.45;
+      overflow:auto;
+      white-space:pre-wrap;
+    }
+    .learnFooter{display:flex;justify-content:flex-start;padding-top:8px;}
+    .backBtn{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.88);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      font-weight:900;
+      font-size:13px;
+    }
+    .backBtn:hover{ background: rgba(255,255,255,.09); }
+    .learnRight{
+      padding:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:10px;
+    }
+    .bigIcon{
+      width: 220px;
+      height: 220px;
+      border-radius: 34px;
+      display:grid;
+      place-items:center;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      box-shadow: 0 18px 40px rgba(0,0,0,.35);
+      font-size:72px;
+      text-align:center;
+    }
+    .bigName{
+      font-weight:950;
+      font-size:18px;
+      letter-spacing:.2px;
+      text-align:center;
+    }
+
+    /* Encyclopedia overlay */
+    #encyOverlay{
+      position:fixed;
+      inset:0;
+      z-index:10010;
+      display:none;
+      background: rgba(0,0,0,.58);
+      backdrop-filter: blur(8px);
+    }
+    .encyCard{
+      position:absolute;
+      left:50%; top:50%;
+      transform: translate(-50%,-50%);
+      width: min(1100px, 95vw);
+      height: min(680px, 88vh);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      box-shadow: 0 24px 70px rgba(0,0,0,.65);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      position:relative;
+    }
+
+    /* NEW: shade that darkens everything behind the encyclopedia intro */
+    #encyIntroShade{
+      position:absolute;
+      inset:0;
+      background: rgba(0,0,0,.62);
+      display:none;
+      z-index:4; /* below intro card (z-index:5), above rest */
+    }
+
+    .encyHead{
+      padding:12px 14px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background: rgba(255,255,255,.03);
+    }
+    .encyTitle{font-weight:950}
+    .encyBtns{display:flex;gap:8px;align-items:center}
+    .pillBtn{
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.88);
+      padding:8px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:900;
+      font-size:12px;
+      user-select:none;
+    }
+    .pillBtn:hover{ background: rgba(255,255,255,.10); }
+    .pillBtn.active{
+      background: rgba(255, 212, 74, .16);
+      border-color: rgba(255, 212, 74, .35);
+    }
+    .encyBody{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      padding:12px;
+      min-height:0;
+      flex:1;
+    }
+    .encyPane{
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .encyPaneHead{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      background: rgba(255,255,255,.03);
+    }
+    .encyPaneTitle{font-weight:950;font-size:13px}
+    .encyPaneSub{font-size:11px;color:rgba(255,255,255,.60)}
+    .encyScroll{
+      padding:10px;
+      overflow:auto;
+      min-height:0;
+      display:grid;
+      gap:8px;
+    }
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      color: rgba(255,255,255,.80);
+    }
+
+    /* Reference intro popup (first open) */
+    #encyIntro{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      max-width:min(420px, 94vw);
+      background: rgba(255,255,255,.09);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 18px;
+      box-shadow: 0 18px 44px rgba(0,0,0,.55);
+      padding: 14px 14px 12px;
+      backdrop-filter: blur(10px);
+      display:none;
+      z-index:5;
+    }
+    .encIntroTitle{font-weight:950;font-size:14px}
+    .encIntroText{margin-top:8px;color:rgba(255,255,255,.78);font-size:12px;line-height:1.4;white-space:pre-line}
+    .encIntroHint{margin-top:6px;color:rgba(255,255,255,.58);font-size:11px}
+    .encIntroActions{margin-top:10px;display:flex;justify-content:flex-end}
+    .encIntroBtn{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.08);
+      color: rgba(255,255,255,.90);
+      font-size:12px;
+      padding:8px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:950;
+    }
+    .encIntroBtn:hover{background:rgba(255,255,255,.12)}
+
+    /* Spoiler warning */
+    #spoilerOverlay{
+      position:fixed;
+      inset:0;
+      z-index:10020;
+      display:none;
+      background: rgba(0,0,0,.68);
+      backdrop-filter: blur(8px);
+    }
+    .spoilerCard{
+      position:absolute;
+      left:50%; top:50%;
+      transform: translate(-50%,-50%);
+      width: min(680px, 92vw);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.07);
+      box-shadow: 0 24px 70px rgba(0,0,0,.65);
+      padding:16px;
+    }
+    .spoilerTitle{font-weight:950;font-size:16px}
+    .spoilerText{margin-top:10px;color:rgba(255,255,255,.76);font-size:13px;line-height:1.45;white-space:pre-line}
+    .spoilerActions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+    .dangerBtn{
+      border:1px solid rgba(255,143,143,.35);
+      background: rgba(255,143,143,.12);
+      color: rgba(255,255,255,.92);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      font-weight:950;
+      font-size:13px;
+    }
+    .dangerBtn:hover{background: rgba(255,143,143,.16)}
+    .ghostBtn{
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.88);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      font-weight:900;
+      font-size:13px;
+    }
+    .ghostBtn:hover{background: rgba(255,255,255,.10)}
+
+    /* =========================
+       HINT BUBBLE (bottom)
+       ========================= */
+    #hintBubble{
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 100200;
+      display: none;
+      max-width: min(760px, 92vw);
+      background: rgba(255,255,255,.09);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 18px;
+      box-shadow: 0 18px 44px rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      padding: 12px 12px;
+      pointer-events: auto;
+    }
+    .hintRow{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .hintTitle{
+      font-weight: 950;
+      font-size: 13px;
+      color: rgba(255,255,255,.92);
+    }
+    .hintText{
+      margin-top: 6px;
+      color: rgba(255,255,255,.78);
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: pre-line;
+    }
+    .hintClose{
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.86);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 900;
+      user-select: none;
+      flex: 0 0 auto;
+    }
+    .hintClose:hover{ background: rgba(255,255,255,.10); }
+
+    @media (max-width: 900px){
+      body{overflow:auto}
+      .main{position:static;grid-template-columns: 1fr}
+      .topbar{position:static}
+      .canvasWrap{height: 60vh}
+      .learnCard{grid-template-columns: 1fr; height: min(720px, 86vh);}
+      .learnLeft{border-right:none;border-bottom:1px solid rgba(255,255,255,.10);}
+      .encyBody{grid-template-columns: 1fr}
+      .toast{max-width: 92vw}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- START SCREEN -->
+  <div class="startScreen" id="startScreen">
+    <div class="startCard">
+      <div class="startTitle">RxCraft 💊</div>
+      <div class="startSub">Hi there! This is the first pre-alpha build of the game, and while it’s still early, I hope it’s both fun to explore and genuinely educational.</div>
+      <div class="startBtns">
+        <button class="playBtn" id="playBtn">▶ Play</button>
+      </div>
+      <div class="startSig">©2025/2026 Rastin Emrani. All Rights Reserved</div>
+    </div>
+  </div>
+
+  <!-- Tutorial overlay -->
+  <div id="tutorialOverlay" aria-hidden="true">
+    <div class="tShade part" id="shadeTop"></div>
+    <div class="tShade part" id="shadeLeft"></div>
+    <div class="tShade part" id="shadeRight"></div>
+    <div class="tShade part" id="shadeBottom"></div>
+
+    <div class="tBubble" id="tBubble">
+      <div class="tHeadRow">
+        <div class="tTitle" id="tTitle">Tutorial</div>
+        <button class="tSkip" id="tSkipBtn" type="button">Skip</button>
+      </div>
+      <div class="tText" id="tText"></div>
+      <div class="tHint" id="tHint"></div>
+      <div class="tActions">
+        <button class="tNext" id="tNextBtn" type="button">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div id="ctxMenu">
+    <div class="ctxItem" id="ctxLearn">
+      <div>Learn more</div><div class="ctxRight">↵</div>
+    </div>
+    <div class="ctxSep" id="ctxSep"></div>
+    <div class="ctxItem" id="ctxTerminate">
+      <div>Terminate</div><div class="ctxRight">⌫</div>
+    </div>
+  </div>
+
+  <!-- Learn More Overlay -->
+  <div id="learnOverlay" aria-hidden="true">
+    <div class="learnCard" role="dialog" aria-modal="true">
+      <div class="learnLeft">
+        <div>
+          <div class="learnTitle" id="lmTitle">Item</div>
+          <div class="learnMeta" id="lmMeta">Recipe: …</div>
+        </div>
+        <div class="learnDesc" id="lmDesc"></div>
+        <div class="learnFooter">
+          <button class="backBtn" id="lmBack" type="button">← Take me back</button>
+        </div>
+      </div>
+      <div class="learnRight">
+        <div class="bigIcon" id="lmIcon">🧬</div>
+        <div class="bigName" id="lmName">Biology</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Encyclopedia Overlay -->
+  <div id="encyOverlay" aria-hidden="true">
+    <div class="encyCard" role="dialog" aria-modal="true">
+      <!-- shade used ONLY for intro focus -->
+      <div id="encyIntroShade"></div>
+
+      <div class="encyHead">
+        <div>
+          <div class="encyTitle">Build-A-Drug Reference Library</div>
+          <div class="panelSub" style="margin-top:2px">Recipe book + full icon index (profiles).</div>
+        </div>
+        <div class="encyBtns">
+          <button class="pillBtn active" id="encyTabRecipes" type="button">Recipe Book</button>
+          <button class="pillBtn" id="encyTabIcons" type="button">All Icons</button>
+          <button class="pillBtn" id="encyClose" type="button">Close</button>
+        </div>
+      </div>
+
+      <div class="encyBody" id="encyBody">
+        <div class="encyPane" id="recipesPane">
+          <div class="encyPaneHead">
+            <div>
+              <div class="encyPaneTitle">Basics + All Recipes</div>
+              <div class="encyPaneSub">Includes every valid combination.</div>
+            </div>
+          </div>
+          <div class="encyScroll">
+            <div class="mono" id="recipesText"></div>
+          </div>
+        </div>
+
+        <div class="encyPane" id="iconsPane">
+          <div class="encyPaneHead">
+            <div>
+              <div class="encyPaneTitle">All Icons (Organized)</div>
+              <div class="encyPaneSub">Click any icon to open its profile.</div>
+            </div>
+          </div>
+          <div class="encyScroll" id="iconsGrid"></div>
+        </div>
+      </div>
+
+      <!-- first-time reference intro -->
+      <div id="encyIntro">
+        <div class="encIntroTitle">How this reference works</div>
+        <div class="encIntroText">
+On the Left side → Your selected function
+Either ...
+1. The Recipe Book:
+  • Shows the basic structure (bases → hubs → systems → mechanisms → classes → effects → final drugs).
+  • Lists every valid combination in the game.
+
+ 2. All icons
+  • Shows every icon by category (bases, hubs, systems, mechanisms, indications, effects, classes, components, drugs).
+  • Click any icon to open its full profile – just like in-game “Learn more”.
+
+You can switch between the functions by selecting the buttons at the top right of this page.
+
+Use this when you want to review concepts or cram for an exam, but remember: it spoils the discovery part of the game.
+        </div>
+        <div class="encIntroHint">You can always come back here later from the top bar.</div>
+        <div class="encIntroActions">
+          <button class="encIntroBtn" id="encyIntroOk" type="button">Got it</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spoiler Warning -->
+  <div id="spoilerOverlay" aria-hidden="true">
+    <div class="spoilerCard" role="dialog" aria-modal="true">
+      <div class="spoilerTitle">Build-A-Drug Reference Library • Spoiler Warning</div>
+      <div class="spoilerText">
+Opening the reference can ruin the fun — we encourage you to keep building.
+
+But we totally get it if you’re trying to cut to the chase (it might be exam season after all… we totally understand, haha).
+      </div>
+      <div class="spoilerActions">
+        <button class="ghostBtn" id="spoilerCancel" type="button">Never mind</button>
+        <button class="dangerBtn" id="spoilerProceed" type="button">Let me in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hint Bubble -->
+  <div id="hintBubble" aria-hidden="true">
+    <div class="hintRow">
+      <div>
+        <div class="hintTitle" id="hintTitle">Hint</div>
+        <div class="hintText" id="hintText"></div>
+      </div>
+      <button class="hintClose" id="hintClose" type="button">Close</button>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">💊</div>
+        <div>
+          <div class="title">RxCraft</div>
+          <div class="subtitle">Click to spawn • Hold to drag • Combine valid recipes only</div>
+        </div>
+      </div>
+
+      <!-- Center logo button (hover grows 10%) -->
+      <a class="topLogoBtn" id="topLogoBtn" href="https://rasty-fun.carrd.co/" target="_blank" rel="noopener noreferrer" aria-label="Logo button">
+        <img class="topLogoImg" src="rastin-logo.png" alt="Rastin logo">
+      </a>
+
+      <div class="topRight">
+        <button class="iconBtn" id="resetCanvasBtn" title="Reset canvas" type="button">↻</button>
+
+        <button class="iconBtn refBtn" id="encyBtn" title="Open reference library (recipes + icons)" type="button">
+          <span class="refIcon">📚</span>
+          <span class="refText">reference library</span>
+        </button>
+
+        <div class="toast" id="toast">Ready.</div>
+      </div>
+    </div>
+
+    <div class="main" id="mainLayout">
+      <div class="canvasWrap" id="canvasWrap">
+        <div class="canvasHint">Hold to drag. Drop near another to combine. Invalid recipes reject (red + jitter) and separate.</div>
+      </div>
+
+      <div class="sidebar">
+        <section class="panel" id="basesPanel">
+          <div class="panelHead">
+            <div class="panelTitle">Bases</div>
+            <div class="panelSub">Left-click to spawn. Right-click for Learn more.</div>
+          </div>
+          <div class="list" id="basesList"></div>
+        </section>
+
+        <section class="panel" id="discoveredPanel">
+          <div class="panelHead">
+            <div class="panelTitle">Discovered</div>
+            <div class="panelSub">Filter by category. Right-click for options.</div>
+          </div>
+
+          <div class="tabsRow" id="discoveredTabs"></div>
+          <div class="list" id="discoveredList"></div>
+
+          <div class="trashDrop">
+            <div class="trashZone" id="trashZone">🗑️ Drop here to delete</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ============================================================
+  // ITEM DEFINITIONS
+  // ============================================================
+  const ITEMS = {
+    I001:{ id:"I001", name:"Biology", type:"BASE", emoji:"🧬" },
+    I002:{ id:"I002", name:"Chemistry", type:"BASE", emoji:"⚗️" },
+    I003:{ id:"I003", name:"Therapy", type:"BASE", emoji:"🩺" },
+
+    I010:{ id:"I010", name:"Biochemistry", type:"HUB", emoji:"🧪" },
+    I011:{ id:"I011", name:"Medicine", type:"HUB", emoji:"🏥" },
+    I012:{ id:"I012", name:"Drug Design", type:"HUB", emoji:"🧫" },
+    I013:{ id:"I013", name:"Pharmacology", type:"HUB", emoji:"💊" },
+    I014:{ id:"I014", name:"Anatomy", type:"HUB", emoji:"🦴" },
+    I015:{ id:"I015", name:"Organ Systems", type:"HUB", emoji:"🫀" },
+    I016:{ id:"I016", name:"Mechanisms", type:"HUB", emoji:"⚙️" },
+    I017:{ id:"I017", name:"Indications", type:"HUB", emoji:"📋" },
+
+    I020:{ id:"I020", name:"CNS", type:"SYSTEM", emoji:"🧠" },
+    I021:{ id:"I021", name:"Heart", type:"SYSTEM", emoji:"❤️" },
+    I022:{ id:"I022", name:"Kidney", type:"SYSTEM", emoji:"🫘" },
+    I023:{ id:"I023", name:"Liver", type:"SYSTEM", emoji:"🟤" },
+    I024:{ id:"I024", name:"GI Tract", type:"SYSTEM", emoji:"🍽️" },
+    I025:{ id:"I025", name:"Blood Vessels", type:"SYSTEM", emoji:"🩸" },
+    I026:{ id:"I026", name:"Bacteria", type:"SYSTEM", emoji:"🦠" },
+    I027:{ id:"I027", name:"Metabolism", type:"SYSTEM", emoji:"🔄" },
+
+    I030:{ id:"I030", name:"Enzyme Inhibition", type:"MECH", emoji:"⛔🧪" },
+    I031:{ id:"I031", name:"Receptor Blockade", type:"MECH", emoji:"🚫📡" },
+    I032:{ id:"I032", name:"Transporter Inhibition", type:"MECH", emoji:"🚧" },
+    I033:{ id:"I033", name:"Ion Channel Modulation", type:"MECH", emoji:"⚡" },
+    I034:{ id:"I034", name:"Cell Wall Disruption", type:"MECH", emoji:"🧱💥" },
+    I035:{ id:"I035", name:"Acid Suppression", type:"MECH", emoji:"🔻🧪" },
+
+    I040:{ id:"I040", name:"Insomnia", type:"INDICATION", emoji:"🌙" },
+    I041:{ id:"I041", name:"Infection", type:"INDICATION", emoji:"🤒" },
+    I042:{ id:"I042", name:"Type 2 Diabetes", type:"INDICATION", emoji:"🍬" },
+    I043:{ id:"I043", name:"Edema / Fluid Overload", type:"INDICATION", emoji:"💧" },
+    I044:{ id:"I044", name:"Hypertension", type:"INDICATION", emoji:"📈" },
+    I045:{ id:"I045", name:"Hyperlipidemia", type:"INDICATION", emoji:"🧈" },
+    I046:{ id:"I046", name:"GERD / Ulcer", type:"INDICATION", emoji:"🔥" },
+
+    I050:{ id:"I050", name:"Sedation", type:"EFFECT", emoji:"😴" },
+    I051:{ id:"I051", name:"Kill Bacteria", type:"EFFECT", emoji:"☠️🦠" },
+    I052:{ id:"I052", name:"Control Glucose", type:"EFFECT", emoji:"📉🍬" },
+    I053:{ id:"I053", name:"Diuresis", type:"EFFECT", emoji:"🚽" },
+    I054:{ id:"I054", name:"Lower BP", type:"EFFECT", emoji:"📉❤️" },
+    I055:{ id:"I055", name:"Lower Cholesterol", type:"EFFECT", emoji:"🧽🩸" },
+    I056:{ id:"I056", name:"Reduce Acid", type:"EFFECT", emoji:"🧯" },
+    I057:{ id:"I057", name:"Vasodilation", type:"EFFECT", emoji:"🌊" },
+
+    I060:{ id:"I060", name:"Z-Hypnotic Pathway", type:"CLASS", emoji:"🌙💤" },
+    I061:{ id:"I061", name:"Aminopenicillin Pathway", type:"CLASS", emoji:"🧫🦠" },
+    I062:{ id:"I062", name:"β-Lactamase Inhibitor Pathway", type:"CLASS", emoji:"🛡️🦠" },
+    I063:{ id:"I063", name:"Biguanide Pathway", type:"CLASS", emoji:"🔄🍬" },
+    I064:{ id:"I064", name:"Loop Diuretic Pathway", type:"CLASS", emoji:"🔁🚽" },
+    I065:{ id:"I065", name:"Statin Pathway", type:"CLASS", emoji:"🧽🧈" },
+    I066:{ id:"I066", name:"β1-Blocker Pathway", type:"CLASS", emoji:"🚫❤️" },
+    I067:{ id:"I067", name:"Thiazide Pathway", type:"CLASS", emoji:"🚿" },
+    I068:{ id:"I068", name:"PPI Pathway", type:"CLASS", emoji:"🔒🔥" },
+    I069:{ id:"I069", name:"DHP-CCB Pathway", type:"CLASS", emoji:"🚪⚡" },
+
+    I070:{ id:"I070", name:"Clavulanate", type:"COMPONENT", emoji:"🔗" },
+
+    I100:{ id:"I100", name:"Zolpidem (Ambien)", type:"DRUG", emoji:"🌙💊" },
+    I101:{ id:"I101", name:"Amoxicillin (Amoxil)", type:"DRUG", emoji:"💊🦠" },
+    I102:{ id:"I102", name:"Augmentin", type:"DRUG", emoji:"💊🛡️" },
+    I103:{ id:"I103", name:"Metformin (Glucophage)", type:"DRUG", emoji:"💊🍬" },
+    I104:{ id:"I104", name:"Furosemide (Lasix)", type:"DRUG", emoji:"💊🚽" },
+    I105:{ id:"I105", name:"Atorvastatin (Lipitor)", type:"DRUG", emoji:"💊🧽" },
+    I106:{ id:"I106", name:"Metoprolol (Lopressor)", type:"DRUG", emoji:"💊❤️" },
+    I107:{ id:"I107", name:"HCTZ (Microzide)", type:"DRUG", emoji:"💊🚿" },
+    I108:{ id:"I108", name:"Esomeprazole (Nexium)", type:"DRUG", emoji:"💊🔥" },
+    I109:{ id:"I109", name:"Amlodipine (Norvasc)", type:"DRUG", emoji:"💊🌊" },
+
+    // =========================
+    // NEW SYSTEMS Feb 7, 2026
+    // =========================
+    I028:{ id:"I028", name:"Lungs", type:"SYSTEM", emoji:"🫁" },
+    I029:{ id:"I029", name:"Immune System", type:"SYSTEM", emoji:"🛡️" },
+
+    // =========================
+    // NEW MECHANISMS Feb 7, 2026
+    // =========================
+    I036:{ id:"I036", name:"COX Inhibition", type:"MECH", emoji:"🧯🩹" },
+    I037:{ id:"I037", name:"Monoamine Reuptake Inhibition", type:"MECH", emoji:"🧠🔁" },
+    I038:{ id:"I038", name:"β2-Adrenergic Agonism", type:"MECH", emoji:"🫁⚡" },
+    I079:{ id:"I079", name:"Dual Monoamine Reuptake Inhibition", type:"MECH", emoji:"🧠🔁🔁" },
+    I080:{ id:"I080", name:"H1 Receptor Blockade", type:"MECH", emoji:"🤧🚫" },
+    I081:{ id:"I081", name:"ACE Inhibition", type:"MECH", emoji:"🩸🔒" },
+    I082:{ id:"I082", name:"Glucocorticoid Receptor Activation", type:"MECH", emoji:"🛡️✨" },
+
+    // =========================
+    // NEW INDICATIONS Feb 7, 2026
+    // =========================
+    I047:{ id:"I047", name:"Pain / Fever", type:"INDICATION", emoji:"🌡️" },
+    I048:{ id:"I048", name:"Depression / Anxiety", type:"INDICATION", emoji:"💭" },
+    I049:{ id:"I049", name:"Asthma / COPD", type:"INDICATION", emoji:"🌬️" },
+    I090:{ id:"I090", name:"Allergic Rhinitis / Urticaria", type:"INDICATION", emoji:"🤧" },
+    I091:{ id:"I091", name:"Urinary Tract Infection", type:"INDICATION", emoji:"🚻" },
+
+    // =========================
+    // NEW EFFECTS Feb 7, 2026
+    // =========================
+    I150:{ id:"I150", name:"Analgesia / Antipyresis", type:"EFFECT", emoji:"🩹" },
+    I151:{ id:"I151", name:"Improve Mood", type:"EFFECT", emoji:"🌤️" },
+    I152:{ id:"I152", name:"Bronchodilation", type:"EFFECT", emoji:"🫁💨" },
+    I153:{ id:"I153", name:"Reduce Inflammation", type:"EFFECT", emoji:"🧊" },
+    I154:{ id:"I154", name:"Relieve Allergy Symptoms", type:"EFFECT", emoji:"🌼" },
+
+    // =========================
+    // NEW CLASSES / PATHWAYS Feb 7, 2026
+    // =========================
+    I071:{ id:"I071", name:"Acetaminophen Pathway", type:"CLASS", emoji:"🌡️🩹" },
+    I072:{ id:"I072", name:"NSAID Pathway", type:"CLASS", emoji:"🧯🩹" },
+    I073:{ id:"I073", name:"SSRI Pathway", type:"CLASS", emoji:"🧠💛" },
+    I074:{ id:"I074", name:"SNRI Pathway", type:"CLASS", emoji:"🧠❤️" },
+    I075:{ id:"I075", name:"SABA Pathway", type:"CLASS", emoji:"🫁⚡" },
+    I076:{ id:"I076", name:"ICS/LABA Combination Pathway", type:"CLASS", emoji:"🛡️🫁" },
+    I077:{ id:"I077", name:"Antihistamine Pathway", type:"CLASS", emoji:"🤧🧼" },
+    I078:{ id:"I078", name:"Nitrofurantoin Pathway", type:"CLASS", emoji:"🚻🦠" },
+    I084:{ id:"I084", name:"ACE-Inhibitor Pathway", type:"CLASS", emoji:"🩸📉" },
+
+    // =========================
+    // NEW DRUGS Feb 7, 2026
+    // =========================
+    I110:{ id:"I110", name:"Acetaminophen (Tylenol)", type:"DRUG", emoji:"💊🌡️" },
+    I111:{ id:"I111", name:"Ibuprofen (Advil)", type:"DRUG", emoji:"💊🩹" },
+    I112:{ id:"I112", name:"Naproxen (Aleve)", type:"DRUG", emoji:"💊⏳" },
+    I113:{ id:"I113", name:"Aspirin (ASA)", type:"DRUG", emoji:"💊🩸" },
+    I114:{ id:"I114", name:"Celecoxib (Celebrex)", type:"DRUG", emoji:"💊🎯" },
+
+    I115:{ id:"I115", name:"Sertraline (Zoloft)", type:"DRUG", emoji:"💊💭" },
+    I116:{ id:"I116", name:"Escitalopram (Cipralex)", type:"DRUG", emoji:"💊🙂" },
+    I117:{ id:"I117", name:"Fluoxetine (Prozac)", type:"DRUG", emoji:"💊⚡" },
+    I118:{ id:"I118", name:"Venlafaxine XR (Effexor XR)", type:"DRUG", emoji:"💊📈" },
+    I119:{ id:"I119", name:"Duloxetine (Cymbalta)", type:"DRUG", emoji:"💊🧠" },
+
+    I120:{ id:"I120", name:"Salbutamol (Ventolin)", type:"DRUG", emoji:"💊🫁" },
+    I121:{ id:"I121", name:"Budesonide/Formoterol (Symbicort)", type:"DRUG", emoji:"💊🛡️" },
+
+    I122:{ id:"I122", name:"Cetirizine (Reactine)", type:"DRUG", emoji:"💊🌼" },
+    I123:{ id:"I123", name:"Loratadine (Claritin)", type:"DRUG", emoji:"💊☀️" },
+    I124:{ id:"I124", name:"Fexofenadine (Allegra)", type:"DRUG", emoji:"💊🕊️" },
+
+    I125:{ id:"I125", name:"Azithromycin (Zithromax)", type:"DRUG", emoji:"💊🎵" },
+    I126:{ id:"I126", name:"Doxycycline", type:"DRUG", emoji:"💊🌞" },
+    I127:{ id:"I127", name:"Cephalexin (Keflex)", type:"DRUG", emoji:"💊🧱" },
+    I128:{ id:"I128", name:"TMP–SMX (Septra)", type:"DRUG", emoji:"💊🧬" },
+    I129:{ id:"I129", name:"Nitrofurantoin (Macrobid)", type:"DRUG", emoji:"💊🚻" },
+
+    I130:{ id:"I130", name:"Ramipril (Altace)", type:"DRUG", emoji:"💊📉" },
+  };
+
+  const TAG_FOR_TYPE = {
+    BASE:"Base", HUB:"Hub", SYSTEM:"System", MECH:"Mechanism",
+    INDICATION:"Indication", EFFECT:"Effect", CLASS:"Class", COMPONENT:"Component", DRUG:"Drug"
+  };
+
+  // ============================================================
+  // RECIPES
+  // ============================================================
+  const RECIPES = Object.create(null);
+  const ITEM_RECIPE = Object.create(null);
+  function keyFor(a,b){ return [a,b].sort().join("|"); }
+  function addRecipe(a,b,result){
+    RECIPES[keyFor(a,b)] = result;
+    ITEM_RECIPE[result] = { a, b };
+  }
+
+  addRecipe("I001","I002","I010");
+  addRecipe("I001","I003","I011");
+  addRecipe("I002","I003","I012");
+  addRecipe("I010","I011","I013");
+  addRecipe("I011","I011","I014");
+  addRecipe("I014","I014","I015");
+  addRecipe("I012","I012","I016");
+  addRecipe("I011","I012","I017");
+
+  addRecipe("I015","I013","I020");
+  addRecipe("I015","I014","I021");
+  addRecipe("I015","I011","I022");
+  addRecipe("I015","I010","I023");
+  addRecipe("I015","I003","I024");
+  addRecipe("I021","I015","I025");
+  addRecipe("I010","I010","I026");
+  addRecipe("I023","I010","I027");
+
+  addRecipe("I016","I010","I030");
+  addRecipe("I016","I011","I031");
+  addRecipe("I016","I002","I032");
+  addRecipe("I016","I001","I033");
+  addRecipe("I016","I026","I034");
+  addRecipe("I016","I024","I035");
+
+  addRecipe("I017","I020","I040");
+  addRecipe("I017","I026","I041");
+  addRecipe("I017","I027","I042");
+  addRecipe("I017","I022","I043");
+  addRecipe("I017","I025","I044");
+  addRecipe("I017","I023","I045");
+  addRecipe("I017","I024","I046");
+
+  addRecipe("I040","I003","I050");
+  addRecipe("I041","I003","I051");
+  addRecipe("I042","I003","I052");
+  addRecipe("I043","I003","I053");
+  addRecipe("I044","I003","I054");
+  addRecipe("I045","I003","I055");
+  addRecipe("I046","I003","I056");
+  addRecipe("I025","I003","I057");
+
+  addRecipe("I020","I033","I060");
+  addRecipe("I026","I034","I061");
+  addRecipe("I026","I030","I062");
+  addRecipe("I027","I030","I063");
+  addRecipe("I022","I032","I064");
+  addRecipe("I023","I030","I065");
+  addRecipe("I021","I031","I066");
+  addRecipe("I022","I030","I067");
+  addRecipe("I024","I035","I068");
+  addRecipe("I025","I033","I069");
+
+  addRecipe("I060","I050","I100");
+  addRecipe("I061","I051","I101");
+  addRecipe("I063","I052","I103");
+  addRecipe("I064","I053","I104");
+  addRecipe("I065","I055","I105");
+  addRecipe("I066","I054","I106");
+  addRecipe("I067","I054","I107");
+  addRecipe("I068","I056","I108");
+  addRecipe("I069","I057","I109");
+
+  addRecipe("I062","I051","I070");
+  addRecipe("I101","I070","I102");
+  addRecipe("I015","I024","I028"); // Organ Systems + GI Tract -> Lungs
+  addRecipe("I015","I017","I029"); // Organ Systems + Indications -> Immune System
+
+  // NEW MECHANISMS
+  addRecipe("I016","I015","I036");
+  addRecipe("I016","I020","I037");
+  addRecipe("I016","I028","I038");
+  addRecipe("I037","I037","I079");
+  addRecipe("I016","I029","I080");
+  addRecipe("I031","I025","I081");
+  addRecipe("I016","I014","I082");
+
+  // NEW INDICATIONS
+  addRecipe("I017","I011","I047");
+  addRecipe("I017","I013","I048");
+  addRecipe("I017","I028","I049");
+  addRecipe("I017","I029","I090");
+  addRecipe("I017","I014","I091");
+
+  // NEW EFFECTS
+  addRecipe("I047","I003","I150");
+  addRecipe("I048","I003","I151");
+  addRecipe("I049","I003","I152");
+  addRecipe("I049","I015","I153");
+  addRecipe("I090","I003","I154");
+
+  // NEW CLASSES
+  addRecipe("I020","I036","I071");
+  addRecipe("I015","I036","I072");
+  addRecipe("I020","I037","I073");
+  addRecipe("I020","I079","I074");
+  addRecipe("I028","I038","I075");
+  addRecipe("I028","I082","I076");
+  addRecipe("I029","I080","I077");
+  addRecipe("I022","I034","I078");
+  addRecipe("I025","I081","I084");
+
+  // NEW DRUG CRAFTS
+  addRecipe("I071","I150","I110");
+  addRecipe("I072","I001","I111");
+  addRecipe("I072","I002","I112");
+  addRecipe("I072","I003","I113");
+  addRecipe("I072","I023","I114");
+
+  addRecipe("I073","I001","I115");
+  addRecipe("I073","I002","I116");
+  addRecipe("I073","I003","I117");
+
+  addRecipe("I074","I001","I118");
+  addRecipe("I074","I002","I119");
+
+  addRecipe("I075","I152","I120");
+  addRecipe("I076","I153","I121");
+
+  addRecipe("I077","I001","I122");
+  addRecipe("I077","I002","I123");
+  addRecipe("I077","I003","I124");
+
+  addRecipe("I026","I035","I125");
+  addRecipe("I026","I027","I126");
+  addRecipe("I026","I014","I127");
+  addRecipe("I026","I032","I128");
+
+  addRecipe("I078","I051","I129");
+  addRecipe("I084","I054","I130");
+
+  ITEM_RECIPE.I001 = null;
+  ITEM_RECIPE.I002 = null;
+  ITEM_RECIPE.I003 = null;
+
+  // ============================================================
+  // DESCRIPTIONS (PORTFOLIOS)
+  // ============================================================
+  const ITEM_DESC = {
+    I001: `Biology represents the study of living systems, including cells, tissues, organs, and physiological pathways. In pharmacology, biology defines where drugs act and how normal vs pathological processes function. Understanding biology is essential for predicting therapeutic effects, side effects, and contraindications. Pharmacy students rely on biological knowledge to link drug action to organ systems, disease states, and patient-specific variables such as age or comorbidities.`,
+    I002: `Chemistry underpins all drug behavior, including structure, bonding, solubility, and reactivity. It explains how drugs interact with receptors, enzymes, and transporters at a molecular level. For pharmacy students, chemistry is critical for understanding mechanism of action, metabolism, drug stability, and formulation differences (e.g., salts, prodrugs). Many adverse effects and interactions originate from chemical properties.`,
+    I003: `Therapy represents the intent to treat, prevent, or manage disease. In pharmacy, therapy connects scientific drug action to clinical decision-making. It frames why a medication is chosen, how it fits into guidelines, and what outcomes are desired. Therapy-focused thinking is essential for patient counseling, treatment selection, and evaluating risk vs benefit.`,
+    // (rest unchanged)
+  };
+
+  // ============================================================
+  // STATE
+  // ============================================================
+  const state = {
+    bases: ["I001","I002","I003"],
+    discovered: [],
+    nodes: new Map(),
+    nextNodeId: 1,
+    activeDiscTab: "ALL",
+  };
+  const terminated = new Set();
+
+  const NODE = 92;
+  const COMBINE_RADIUS = 60;
+  const HOLD_MS = 140;
+
+  const DISC_TABS = [
+    { key:"ALL", label:"All" },
+    { key:"HUB", label:"Hubs" },
+    { key:"SYSTEM", label:"Systems" },
+    { key:"MECH", label:"Mechanisms" },
+    { key:"INDICATION", label:"Indications" },
+    { key:"EFFECT", label:"Effects" },
+    { key:"CLASS", label:"Classes" },
+    { key:"COMPONENT", label:"Components" },
+    { key:"DRUG", label:"Drugs" },
+  ];
+
+  // DOM refs
+  const startScreen = document.getElementById("startScreen");
+  const playBtn = document.getElementById("playBtn");
+  const app = document.getElementById("app");
+  const toastEl = document.getElementById("toast");
+  const canvasWrap = document.getElementById("canvasWrap");
+  const basesList = document.getElementById("basesList");
+  const discoveredTabs = document.getElementById("discoveredTabs");
+  const discoveredList = document.getElementById("discoveredList");
+  const trashZone = document.getElementById("trashZone");
+  const resetCanvasBtn = document.getElementById("resetCanvasBtn");
+
+  // encyclopedia
+  const encyBtn = document.getElementById("encyBtn");
+  const encyOverlay = document.getElementById("encyOverlay");
+  const encyClose = document.getElementById("encyClose");
+  const encyTabRecipes = document.getElementById("encyTabRecipes");
+  const encyTabIcons = document.getElementById("encyTabIcons");
+  const recipesText = document.getElementById("recipesText");
+  const iconsGrid = document.getElementById("iconsGrid");
+  const recipesPane = document.getElementById("recipesPane");
+  const iconsPane = document.getElementById("iconsPane");
+  const encyIntro = document.getElementById("encyIntro");
+  const encyIntroOk = document.getElementById("encyIntroOk");
+  const encyIntroShade = document.getElementById("encyIntroShade");
+  const encyBody = document.getElementById("encyBody");
+  const encyHead = document.querySelector(".encyHead");
+  let encyIntroShown = false;
+
+  // spoiler
+  const spoilerOverlay = document.getElementById("spoilerOverlay");
+  const spoilerCancel = document.getElementById("spoilerCancel");
+  const spoilerProceed = document.getElementById("spoilerProceed");
+  let spoilerShownOnce = false;
+
+  // tutorial
+  const tutorialOverlay = document.getElementById("tutorialOverlay");
+  const shadeTop = document.getElementById("shadeTop");
+  const shadeLeft = document.getElementById("shadeLeft");
+  const shadeRight = document.getElementById("shadeRight");
+  const shadeBottom = document.getElementById("shadeBottom");
+  const tBubble = document.getElementById("tBubble");
+  const tTitle = document.getElementById("tTitle");
+  const tText = document.getElementById("tText");
+  const tHint = document.getElementById("tHint");
+  const tSkipBtn = document.getElementById("tSkipBtn");
+  const tNextBtn = document.getElementById("tNextBtn");
+
+  // context menu
+  const ctxMenu = document.getElementById("ctxMenu");
+  const ctxLearn = document.getElementById("ctxLearn");
+  const ctxTerminate = document.getElementById("ctxTerminate");
+  const ctxSep = document.getElementById("ctxSep");
+  let ctxTargetItemId = null;
+
+  // learn more
+  const learnOverlay = document.getElementById("learnOverlay");
+  const lmTitle = document.getElementById("lmTitle");
+  const lmMeta = document.getElementById("lmMeta");
+  const lmDesc = document.getElementById("lmDesc");
+  const lmIcon = document.getElementById("lmIcon");
+  const lmName = document.getElementById("lmName");
+  const lmBack = document.getElementById("lmBack");
+
+  // hint bubble refs + hint/inactivity state
+  const hintBubble = document.getElementById("hintBubble");
+  const hintTitle = document.getElementById("hintTitle");
+  const hintText  = document.getElementById("hintText");
+  const hintClose = document.getElementById("hintClose");
+
+  let failedCombos = 0;
+  let lastActivityAt = Date.now();
+  let hintCooldownUntil = 0;
+  const INACTIVITY_MS = 30000;
+  const HINT_COOLDOWN_MS = 20000;
+
+  function markActivity(){ lastActivityAt = Date.now(); }
+
+  function hideHint(){
+    hintBubble.style.display = "none";
+    hintBubble.setAttribute("aria-hidden","true");
+  }
+  function showHint(message, title="Hint"){
+    const now = Date.now();
+    if(now < hintCooldownUntil) return;
+
+    hintTitle.textContent = title;
+    hintText.textContent = message;
+
+    hintBubble.style.display = "block";
+    hintBubble.setAttribute("aria-hidden","false");
+
+    hintCooldownUntil = now + HINT_COOLDOWN_MS;
+
+    setTimeout(() => {
+      if(Date.now() >= hintCooldownUntil - (HINT_COOLDOWN_MS - 1000)) hideHint();
+    }, 12000);
+  }
+  hintClose.addEventListener("click", hideHint);
+
+  function toast(msg, kind=""){
+    toastEl.textContent = msg;
+    toastEl.style.color =
+      kind==="good" ? "rgba(110, 231, 255, .95)" :
+      kind==="bad"  ? "rgba(255, 143, 143, .95)" :
+      "rgba(255,255,255,.65)";
+  }
+
+  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+  function getCanvasRect(){ return canvasWrap.getBoundingClientRect(); }
+  function getTrashRect(){ return trashZone.getBoundingClientRect(); }
+  function inRect(x,y,r){ return x>=r.left && x<=r.right && y>=r.top && y<=r.bottom; }
+  function clientToCanvas(clientX, clientY){
+    const r = getCanvasRect();
+    return { x: clientX - r.left, y: clientY - r.top };
+  }
+
+  function spawnableIds(){
+    const bases = state.bases.filter(id => !terminated.has(id));
+    const disc  = state.discovered.filter(id => !terminated.has(id));
+    return new Set([...bases, ...disc]);
+  }
+  function notYetDiscovered(id){
+    return !state.bases.includes(id) && !state.discovered.includes(id);
+  }
+  function recipeToHintLine(a,b,res){
+    const A = ITEMS[a], B = ITEMS[b], R = ITEMS[res];
+    return `${a} ${A.emoji} (${A.name}) + ${b} ${B.emoji} (${B.name}) → ${res} ${R.emoji} (${R.name})`;
+  }
+  function getNextHintRecipe(){
+    const canUse = spawnableIds();
+
+    for(const [k,res] of Object.entries(RECIPES)){
+      const [a,b] = k.split("|");
+      if(canUse.has(a) && canUse.has(b) && notYetDiscovered(res)){
+        return { a, b, res };
+      }
+    }
+    for(const [k,res] of Object.entries(RECIPES)){
+      const [a,b] = k.split("|");
+      if(notYetDiscovered(res)){
+        return { a, b, res };
+      }
+    }
+    return null;
+  }
+  function maybeShowProgressHint(reasonLabel){
+    const hint = getNextHintRecipe();
+    if(!hint){
+      showHint("You’ve discovered everything in this build 👀", reasonLabel);
+      return;
+    }
+    showHint(`Try crafting:\n${recipeToHintLine(hint.a, hint.b, hint.res)}`, reasonLabel);
+  }
+
+  // Count almost any interaction as activity (prevents 30s hint while user is playing)
+  ["pointerdown","pointermove","pointerup","keydown","wheel"].forEach(evt => {
+    window.addEventListener(evt, markActivity, { passive:true });
+  });
+
+  // inactivity hint loop
+  setInterval(() => {
+    const now = Date.now();
+    if(app.style.display !== "block") return;
+    if(now - lastActivityAt >= INACTIVITY_MS){
+      maybeShowProgressHint("Need a nudge?");
+      lastActivityAt = now;
+    }
+  }, 1000);
+
+  // unlock
+  function unlock(itemId){
+    if(terminated.has(itemId)) terminated.delete(itemId);
+    if(state.bases.includes(itemId) || state.discovered.includes(itemId)){
+      renderSidebar();
+      return false;
+    }
+    state.discovered.push(itemId);
+    renderSidebar();
+    return true;
+  }
+
+  function craft(a,b){
+    const k = keyFor(a,b);
+    return RECIPES[k] || null;
+  }
+
+  // context menu
+  function openContextMenu(itemId, x, y){
+    ctxTargetItemId = itemId;
+    const it = ITEMS[itemId];
+
+    if(it.type === "BASE"){
+      ctxTerminate.style.display = "none";
+      ctxSep.style.display = "none";
+    } else {
+      ctxTerminate.style.display = "flex";
+      ctxSep.style.display = "block";
+    }
+
+    const w = 190, h = (it.type === "BASE" ? 46 : 86);
+    const vx = window.innerWidth, vy = window.innerHeight;
+    const px = clamp(x, 10, vx - 10 - w);
+    const py = clamp(y, 10, vy - 10 - h);
+    ctxMenu.style.left = px + "px";
+    ctxMenu.style.top = py + "px";
+    ctxMenu.style.display = "block";
+
+    if(tutorial.active){
+      tutorialSignals.rcOpened = true;
+      tutorialTryAdvance();
+    }
+  }
+  function closeContextMenu(){
+    ctxMenu.style.display = "none";
+    ctxTargetItemId = null;
+  }
+
+  function terminateItem(itemId){
+    const it = ITEMS[itemId];
+    if(it.type === "BASE") return;
+    terminated.add(itemId);
+    renderSidebar();
+    toast(`${it.name} terminated (hidden). Craft again to restore.`, "");
+  }
+
+  // learn more
+  function openLearnMore(itemId){
+    const it = ITEMS[itemId];
+    const rec = ITEM_RECIPE[itemId];
+
+    lmTitle.textContent = `Profile: ${it.id} — ${it.name}`;
+    lmName.textContent = `${it.name}`;
+    lmIcon.textContent = it.emoji;
+
+    if(rec === null){
+      lmMeta.textContent = `Type: ${it.type}\nRecipe: Base item (starter).`;
+    } else if(rec && rec.a && rec.b){
+      const A = ITEMS[rec.a], B = ITEMS[rec.b];
+      lmMeta.textContent =
+        `Type: ${it.type}\nRecipe: ${rec.a} ${A.emoji} (${A.name}) + ${rec.b} ${B.emoji} (${B.name}) → ${itemId} ${it.emoji} (${it.name})`;
+    } else {
+      lmMeta.textContent = `Type: ${it.type}\nRecipe: Unknown / not recorded.`;
+    }
+
+    lmDesc.textContent = ITEM_DESC[itemId] || `No description yet for ${it.name}.`;
+
+    learnOverlay.style.display = "block";
+    learnOverlay.setAttribute("aria-hidden","false");
+    closeContextMenu();
+
+    if(tutorial.active){
+      tutorialSignals.learnOpened = true;
+      tutorialTryAdvance();
+    }
+  }
+  function closeLearnMore(){
+    learnOverlay.style.display = "none";
+    learnOverlay.setAttribute("aria-hidden","true");
+  }
+  lmBack.addEventListener("click", closeLearnMore);
+  learnOverlay.addEventListener("pointerdown", (e) => { if(e.target === learnOverlay) closeLearnMore(); });
+
+  ctxLearn.addEventListener("click", () => {
+    if(!ctxTargetItemId) return;
+    openLearnMore(ctxTargetItemId);
+  });
+  ctxTerminate.addEventListener("click", () => {
+    if(!ctxTargetItemId) return;
+    terminateItem(ctxTargetItemId);
+    closeContextMenu();
+    if(tutorial.active){
+      tutorialSignals.terminatedUsed = true;
+      tutorialTryAdvance();
+    }
+  });
+
+  window.addEventListener("pointerdown", (e) => {
+    if(!ctxMenu.contains(e.target)) closeContextMenu();
+  });
+  window.addEventListener("scroll", closeContextMenu, { passive:true });
+  window.addEventListener("resize", closeContextMenu);
+  document.querySelector(".sidebar").addEventListener("contextmenu", (e) => e.preventDefault());
+
+  // sidebar rendering
+  function renderItemButton(itemId){
+    const it = ITEMS[itemId];
+    const btn = document.createElement("div");
+    btn.className = "itemBtn";
+    btn.dataset.itemId = itemId;
+    btn.innerHTML = `
+      <div class="itemLeft">
+        <div class="itemIcon">${it.emoji}</div>
+        <div class="itemName">${it.id} — ${it.name}</div>
+      </div>
+      <div class="itemTag">${TAG_FOR_TYPE[it.type] || it.type}</div>
+    `;
+
+    btn.addEventListener("click", () => {
+      spawnNode(itemId);
+      toast(`Spawned ${it.name}. Hold to drag.`, "");
+      markActivity();
+      hideHint();
+      if(tutorial.active && tutorial.steps[tutorial.step]?.id === "pick2bases" && state.bases.includes(itemId)){
+        tutorialSignals.baseClicks++;
+        tutorialTryAdvance();
+      }
+    });
+
+    btn.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      openContextMenu(itemId, e.clientX, e.clientY);
+    });
+
+    return btn;
+  }
+
+  function renderDiscoveredTabs(){
+    discoveredTabs.innerHTML = "";
+    for(const t of DISC_TABS){
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tabBtn" + (state.activeDiscTab === t.key ? " active" : "");
+      b.textContent = t.label;
+      b.addEventListener("click", () => {
+        state.activeDiscTab = t.key;
+        renderSidebar();
+        markActivity();
+      });
+      discoveredTabs.appendChild(b);
+    }
+  }
+
+  function discoveredByActiveTab(){
+    const visible = state.discovered.filter(id => !terminated.has(id));
+    if(state.activeDiscTab === "ALL") return visible;
+    return visible.filter(id => ITEMS[id]?.type === state.activeDiscTab);
+  }
+
+  function emptyGroupMessage(tabKey){
+    const label = (DISC_TABS.find(t => t.key === tabKey)?.label) || tabKey;
+    return `Nothing discovered in "${label}" yet.\nKeep combining items to unlock more!`;
+  }
+
+  function renderSidebar(){
+    basesList.innerHTML = "";
+    state.bases.filter(id => !terminated.has(id)).forEach(id => basesList.appendChild(renderItemButton(id)));
+
+    renderDiscoveredTabs();
+    discoveredList.innerHTML = "";
+    const visibleInTab = discoveredByActiveTab();
+
+    if(visibleInTab.length === 0){
+      const empty = document.createElement("div");
+      empty.style.padding = "10px";
+      empty.style.color = "rgba(255,255,255,.60)";
+      empty.style.fontSize = "12px";
+      empty.style.whiteSpace = "pre-line";
+      empty.textContent = emptyGroupMessage(state.activeDiscTab);
+      discoveredList.appendChild(empty);
+    } else {
+      visibleInTab.forEach(id => discoveredList.appendChild(renderItemButton(id)));
+    }
+  }
+
+  // encyclopedia
+  function recipeBookText(){
+    const lines = [];
+    lines.push("BASICS");
+    lines.push("• Build hubs from the 3 starters.");
+    lines.push("• Systems + Mechanisms → Classes/Pathways.");
+    lines.push("• Classes + Effects → Final Drugs.");
+    lines.push("• Special combo: craft component, then apply it to the base drug.");
+    lines.push("");
+    lines.push("ALL VALID RECIPES");
+    const entries = Object.entries(RECIPES)
+      .map(([k,res]) => ({ k, res }))
+      .sort((a,b) => a.res.localeCompare(b.res));
+    for(const e of entries){
+      const [a,b] = e.k.split("|");
+      const A = ITEMS[a], B = ITEMS[b], R = ITEMS[e.res];
+      lines.push(`${a} ${A.emoji} (${A.name}) + ${b} ${B.emoji} (${B.name})  →  ${e.res} ${R.emoji} (${R.name})`);
+    }
+    return lines.join("\n");
+  }
+
+  function groupItemsByType(){
+    const groups = {};
+    for(const id in ITEMS){
+      const t = ITEMS[id].type;
+      (groups[t] ||= []).push(id);
+    }
+    for(const t in groups){
+      groups[t].sort((a,b) => ITEMS[a].name.localeCompare(ITEMS[b].name));
+    }
+    return groups;
+  }
+
+  function renderAllIconsIndex(){
+    iconsGrid.innerHTML = "";
+    const groups = groupItemsByType();
+    const order = ["BASE","HUB","SYSTEM","MECH","INDICATION","EFFECT","CLASS","COMPONENT","DRUG"];
+    for(const t of order){
+      const ids = groups[t] || [];
+      const head = document.createElement("div");
+      head.style.margin = "6px 2px 2px";
+      head.style.fontWeight = "950";
+      head.style.color = "rgba(255,255,255,.84)";
+      head.style.fontSize = "12px";
+      head.textContent = `${TAG_FOR_TYPE[t] || t} (${ids.length})`;
+      iconsGrid.appendChild(head);
+
+      for(const id of ids){
+        const btn = document.createElement("div");
+        btn.className = "itemBtn";
+        btn.innerHTML = `
+          <div class="itemLeft">
+            <div class="itemIcon">${ITEMS[id].emoji}</div>
+            <div class="itemName">${id} — ${ITEMS[id].name}</div>
+          </div>
+          <div class="itemTag">${TAG_FOR_TYPE[t] || t}</div>
+        `;
+        btn.addEventListener("click", () => { openLearnMore(id); markActivity(); });
+        iconsGrid.appendChild(btn);
+      }
+    }
+  }
+
+  function showEncyTab(which){
+    const isRecipes = which === "recipes";
+    encyTabRecipes.classList.toggle("active", isRecipes);
+    encyTabIcons.classList.toggle("active", !isRecipes);
+    recipesPane.style.display = isRecipes ? "flex" : "none";
+    iconsPane.style.display = isRecipes ? "none" : "flex";
+  }
+
+  function showEncyIntro(){
+    if(encyIntroShown) return;
+    encyIntro.style.display = "block";
+    encyIntroShade.style.display = "block";
+    encyBody.style.pointerEvents = "none";
+    encyHead.style.pointerEvents = "none";
+  }
+  function hideEncyIntro(){
+    encyIntroShown = true;
+    encyIntro.style.display = "none";
+    encyIntroShade.style.display = "none";
+    encyBody.style.pointerEvents = "auto";
+    encyHead.style.pointerEvents = "auto";
+  }
+  encyIntroOk.addEventListener("click", hideEncyIntro);
+
+  function openEncyclopedia(){
+    recipesText.textContent = recipeBookText();
+    renderAllIconsIndex();
+    showEncyTab("recipes");
+    encyOverlay.style.display = "block";
+    encyOverlay.setAttribute("aria-hidden","false");
+    if(!encyIntroShown) showEncyIntro();
+    markActivity();
+  }
+  function closeEncyclopedia(){
+    encyOverlay.style.display = "none";
+    encyOverlay.setAttribute("aria-hidden","true");
+  }
+
+  encyTabRecipes.addEventListener("click", () => { showEncyTab("recipes"); markActivity(); });
+  encyTabIcons.addEventListener("click", () => { showEncyTab("icons"); markActivity(); });
+  encyClose.addEventListener("click", () => { closeEncyclopedia(); markActivity(); });
+  encyOverlay.addEventListener("pointerdown", (e) => { if(e.target === encyOverlay) closeEncyclopedia(); });
+
+  // spoiler gating
+  function requestEncyclopediaOpen(){
+    if(!spoilerShownOnce){
+      spoilerOverlay.style.display = "block";
+      spoilerOverlay.setAttribute("aria-hidden","false");
+      return;
+    }
+    openEncyclopedia();
+  }
+  function closeSpoiler(){
+    spoilerOverlay.style.display = "none";
+    spoilerOverlay.setAttribute("aria-hidden","true");
+  }
+  spoilerCancel.addEventListener("click", () => { closeSpoiler(); markActivity(); });
+  spoilerProceed.addEventListener("click", () => {
+    spoilerShownOnce = true;
+    closeSpoiler();
+    openEncyclopedia();
+  });
+  spoilerOverlay.addEventListener("pointerdown", (e) => { if(e.target === spoilerOverlay) closeSpoiler(); });
+
+  encyBtn.addEventListener("click", () => { requestEncyclopediaOpen(); markActivity(); });
+
+  // nodes and drag
+  function applyTransform(n){
+    const el = n.el;
+    el.style.setProperty("--x", n.x + "px");
+    el.style.setProperty("--y", n.y + "px");
+    const lift = n.dragging ? -6 : 0;
+    const scale = n.dragging ? 1.06 : 1.0;
+    el.style.transform = `translate3d(${n.x}px, ${n.y + lift}px, 0) rotate(${n.rot}deg) scale(${scale})`;
+  }
+  function stopGlowOnInteract(el){
+    if(el.classList.contains("ringGlow")) el.classList.remove("ringGlow");
+  }
+  function markInvalid(node, on=true){
+    if(!node) return;
+    if(on){
+      node.el.classList.add("invalid","jitter");
+    } else {
+      node.el.classList.remove("invalid","jitter");
+    }
+  }
+  function separateInvalidPair(aNode, bNode){
+    const ax = aNode.x + NODE/2, ay = aNode.y + NODE/2;
+    const bx = bNode.x + NODE/2, by = bNode.y + NODE/2;
+    let dx = ax - bx, dy = ay - by;
+    let len = Math.hypot(dx,dy) || 1;
+    dx /= len; dy /= len;
+
+    const push = 46;
+    aNode.tx = aNode.x + dx*push;
+    aNode.ty = aNode.y + dy*push;
+    bNode.tx = bNode.x - dx*push;
+    bNode.ty = bNode.y - dy*push;
+
+    const r = getCanvasRect();
+    aNode.tx = clamp(aNode.tx, 0, r.width - NODE);
+    aNode.ty = clamp(aNode.ty, 0, r.height - NODE);
+    bNode.tx = clamp(bNode.tx, 0, r.width - NODE);
+    bNode.ty = clamp(bNode.ty, 0, r.height - NODE);
+  }
+
+  function spawnNode(itemId, opts={}){
+    const r = getCanvasRect();
+    let x = opts.x ?? (38 + Math.random()*220);
+    let y = opts.y ?? (70 + Math.random()*180);
+    x = clamp(x, 0, r.width - NODE);
+    y = clamp(y, 0, r.height - NODE);
+
+    const nodeId = String(state.nextNodeId++);
+    const it = ITEMS[itemId];
+
+    const el = document.createElement("div");
+    el.className = "node";
+    el.dataset.nodeId = nodeId;
+    el.dataset.itemId = itemId;
+    el.innerHTML = `<div class="ico">${it.emoji}</div><div class="txt">${it.name}</div>`;
+
+    const n = {
+      nodeId, itemId,
+      x, y, tx:x, ty:y,
+      vx:0, vy:0,
+      rot:0,
+      dragging:false,
+      originX:x, originY:y,
+      grabOX:NODE/2, grabOY:NODE/2,
+      holdTimer:null,
+      pointerId:null,
+      el
+    };
+
+    canvasWrap.appendChild(el);
+    applyTransform(n);
+
+    el.classList.add("poof");
+    setTimeout(() => el.classList.remove("poof"), 300);
+
+    el.addEventListener("pointerdown", (e) => {
+      stopGlowOnInteract(el);
+      markInvalid(n,false);
+      hideHint();
+      markActivity();
+
+      e.preventDefault();
+      el.setPointerCapture(e.pointerId);
+      n.pointerId = e.pointerId;
+
+      el.style.zIndex = String(1000 + (Date.now() % 1000));
+      n.originX = n.x;
+      n.originY = n.y;
+
+      const b = el.getBoundingClientRect();
+      n.grabOX = e.clientX - b.left;
+      n.grabOY = e.clientY - b.top;
+
+      if(n.holdTimer) clearTimeout(n.holdTimer);
+      n.holdTimer = setTimeout(() => {
+        n.dragging = true;
+        el.classList.add("pickedUp");
+        toast("Dragging… drop on canvas or trash.", "");
+      }, HOLD_MS);
+    });
+
+    el.addEventListener("pointermove", (e) => {
+      if(n.pointerId !== e.pointerId) return;
+      markActivity();
+
+      const tr = getTrashRect();
+      if(inRect(e.clientX, e.clientY, tr)) trashZone.classList.add("hot");
+      else trashZone.classList.remove("hot");
+
+      if(!n.dragging) return;
+      const c = clientToCanvas(e.clientX, e.clientY);
+      n.tx = c.x - n.grabOX;
+      n.ty = c.y - n.grabOY;
+    });
+
+    el.addEventListener("pointerup", (e) => {
+      if(n.pointerId !== e.pointerId) return;
+
+      el.releasePointerCapture(e.pointerId);
+      n.pointerId = null;
+
+      if(n.holdTimer) clearTimeout(n.holdTimer);
+      n.holdTimer = null;
+
+      if(!n.dragging){
+        trashZone.classList.remove("hot");
+        toast("Hold to drag.", "");
+        markActivity();
+        return;
+      }
+
+      n.dragging = false;
+      el.classList.remove("pickedUp");
+      trashZone.classList.remove("hot");
+      markActivity();
+
+      const cr = getCanvasRect();
+      const tr = getTrashRect();
+      const overTrash = inRect(e.clientX, e.clientY, tr);
+      const overCanvas = inRect(e.clientX, e.clientY, cr);
+
+      if(overTrash){
+        deleteNode(n.nodeId);
+        toast("Deleted.", "");
+        return;
+      }
+
+      if(!overCanvas){
+        n.tx = n.originX;
+        n.ty = n.originY;
+        n.vx *= 0.2; n.vy *= 0.2;
+        el.classList.add("impact");
+        setTimeout(() => el.classList.remove("impact"), 200);
+        toast("Invalid drop — returned.", "bad");
+        return;
+      }
+
+      const rr = getCanvasRect();
+      n.tx = clamp(n.tx, 0, rr.width - NODE);
+      n.ty = clamp(n.ty, 0, rr.height - NODE);
+
+      el.classList.add("impact");
+      setTimeout(() => el.classList.remove("impact"), 220);
+
+      const other = findNearestForCombine(n);
+      if(other){
+        const a = n.itemId;
+        const b = other.itemId;
+        const result = craft(a,b);
+
+        if(!result){
+          toast("INVALID RECIPE", "bad");
+          markInvalid(n,true);
+          markInvalid(other,true);
+          separateInvalidPair(n, other);
+
+          failedCombos++;
+          if(failedCombos >= 5){
+            failedCombos = 0;
+            maybeShowProgressHint("Stuck? Here’s a valid combo");
+          }
+
+          setTimeout(() => {
+            markInvalid(n,false);
+            markInvalid(other,false);
+          }, 1000);
+          return;
+        }
+
+        failedCombos = 0;
+        hideHint();
+
+        const newlyUnlocked = unlock(result);
+        const midX = (n.x + other.x)/2 + 8;
+        const midY = (n.y + other.y)/2 + 8;
+
+        deleteNode(n.nodeId);
+        deleteNode(other.nodeId);
+
+        const newNode = spawnNode(result, { x: midX, y: midY });
+        newNode.el.classList.add("pop");
+        setTimeout(() => newNode.el.classList.remove("pop"), 260);
+
+        if(newlyUnlocked){
+          newNode.el.classList.add("ringGlow");
+          setTimeout(() => newNode.el.classList.remove("ringGlow"), 2000);
+        }
+
+        toast(`${ITEMS[a].name} + ${ITEMS[b].name} → ${ITEMS[result].name}`, "good");
+
+        if(tutorial.active && tutorial.steps[tutorial.step]?.id === "combine"){
+          tutorialSignals.combined = true;
+          tutorialTryAdvance();
+        }
+      } else {
+        toast("Dropped.", "");
+      }
+    });
+
+    el.addEventListener("pointercancel", () => {
+      if(n.holdTimer) clearTimeout(n.holdTimer);
+      n.holdTimer = null;
+      n.pointerId = null;
+      n.dragging = false;
+      el.classList.remove("pickedUp");
+      trashZone.classList.remove("hot");
+      markActivity();
+    });
+
+    state.nodes.set(nodeId, n);
+    return n;
+  }
+
+  function deleteNode(nodeId){
+    const n = state.nodes.get(nodeId);
+    if(!n) return;
+    if(n.holdTimer) clearTimeout(n.holdTimer);
+    n.el.remove();
+    state.nodes.delete(nodeId);
+  }
+
+  function findNearestForCombine(n){
+    const cx = n.x + NODE/2;
+    const cy = n.y + NODE/2;
+    let best = null, bestD = Infinity;
+    for(const other of state.nodes.values()){
+      if(other.nodeId === n.nodeId) continue;
+      const ox = other.x + NODE/2;
+      const oy = other.y + NODE/2;
+      const d = Math.hypot(ox - cx, oy - cy);
+      if(d < COMBINE_RADIUS && d < bestD){ bestD = d; best = other; }
+    }
+    return best;
+  }
+
+  // animation loop
+  function tick(){
+    const r = getCanvasRect();
+    for(const n of state.nodes.values()){
+      const dx = n.tx - n.x;
+      const dy = n.ty - n.y;
+
+      n.vx = (n.vx + dx * 0.55) * 0.58;
+      n.vy = (n.vy + dy * 0.55) * 0.58;
+
+      n.x += n.vx;
+      n.y += n.vy;
+
+      if(n.dragging){
+        const pad = 260;
+        n.x = clamp(n.x, -pad, r.width - NODE + pad);
+        n.y = clamp(n.y, -pad, r.height - NODE + pad);
+        n.rot = clamp(n.vx * 0.8, -14, 14);
+      } else {
+        n.x = clamp(n.x, -40, r.width - NODE + 40);
+        n.y = clamp(n.y, -40, r.height - NODE + 40);
+        n.rot *= 0.85;
+        if(Math.abs(n.rot) < 0.05) n.rot = 0;
+      }
+
+      applyTransform(n);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // reset canvas
+  function resetCanvas(){
+    const ids = Array.from(state.nodes.keys());
+    ids.forEach(deleteNode);
+    toast("Canvas cleared.", "");
+    markActivity();
+  }
+  resetCanvasBtn.addEventListener("click", resetCanvas);
+
+  // tutorial
+  const tutorialSignals = {
+    baseClicks: 0,
+    combined: false,
+    rcOpened: false,
+    learnOpened: false,
+    terminatedUsed: false
+  };
+
+  const tutorial = {
+    active: false,
+    step: 0,
+    autoLock: false,
+    steps: [
+      { id: "welcome", title: "Welcome to Build-A-Drug!", text: "Drag & combine items on the canvas to discover new pharmacology concepts.", hint: "Press Next to continue.", target: () => document.getElementById("canvasWrap"), require: null },
+      { id: "layout", title: "Screen layout", text: "Right side: Bases + Discovered list.\nLeft side: Canvas where you combine items.", hint: "Press Next to continue.", target: () => document.getElementById("mainLayout"), require: null },
+      { id: "pick2bases", title: "Select 2 base icons", text: "Click TWO base items in the Bases list to spawn them on the canvas.", hint: "Action required: click TWO bases.", target: () => document.getElementById("basesPanel"), require: () => tutorialSignals.baseClicks >= 2, autoAdvance: true },
+      { id: "combine", title: "Combine them", text: "Hold to drag and drop near another.\nValid recipes create a new item.\nInvalid recipes will reject (red + jitter).", hint: "Action required: create your first valid combination.", target: () => document.getElementById("canvasWrap"), require: () => tutorialSignals.combined === true, autoAdvance: true },
+      { id: "rightclick", title: "Right-click options", text: "Right-click any item in the right column:\n• Learn more\n• Terminate (non-bases only)", hint: "Action required: right-click, then use Learn more OR Terminate.", target: () => document.getElementById("discoveredPanel"), require: () => tutorialSignals.rcOpened && (tutorialSignals.learnOpened || tutorialSignals.terminatedUsed), autoAdvance: true },
+      { id: "finish", title: "Keep crafting!", text: "Discover pathways, effects, and final drugs.\nUse 📚 reference library if you ever want the full recipe book & profiles.", hint: "Press Next to finish.", target: () => document.getElementById("discoveredPanel"), require: null },
+    ]
+  };
+
+  function tutorialStart(){
+    tutorial.active = true;
+    tutorial.step = 0;
+    tutorial.autoLock = false;
+    tutorialSignals.baseClicks = 0;
+    tutorialSignals.combined = false;
+    tutorialSignals.rcOpened = false;
+    tutorialSignals.learnOpened = false;
+    tutorialSignals.terminatedUsed = false;
+
+    tutorialOverlay.style.display = "block";
+    tutorialOverlay.setAttribute("aria-hidden","false");
+    tutorialRender();
+  }
+  function tutorialStop(){
+    tutorial.active = false;
+    tutorialOverlay.style.display = "none";
+    tutorialOverlay.setAttribute("aria-hidden","true");
+  }
+
+  function tutorialRender(){
+    if(!tutorial.active) return;
+    const s = tutorial.steps[tutorial.step];
+    if(!s){ tutorialStop(); return; }
+
+    const el = s.target?.();
+    const rect = el ? el.getBoundingClientRect() : {left:20, top:20, right:320, bottom:160};
+    const pad = 10;
+    const hole = { left: rect.left - pad, top: rect.top - pad, right: rect.right + pad, bottom: rect.bottom + pad };
+    const vw = window.innerWidth, vh = window.innerHeight;
+
+    shadeTop.style.left = "0px";
+    shadeTop.style.top = "0px";
+    shadeTop.style.width = vw + "px";
+    shadeTop.style.height = Math.max(0, hole.top) + "px";
+
+    shadeLeft.style.left = "0px";
+    shadeLeft.style.top = Math.max(0, hole.top) + "px";
+    shadeLeft.style.width = Math.max(0, hole.left) + "px";
+    shadeLeft.style.height = Math.max(0, hole.bottom - hole.top) + "px";
+
+    shadeRight.style.left = Math.max(0, hole.right) + "px";
+    shadeRight.style.top = Math.max(0, hole.top) + "px";
+    shadeRight.style.width = Math.max(0, vw - hole.right) + "px";
+    shadeRight.style.height = Math.max(0, hole.bottom - hole.top) + "px";
+
+    shadeBottom.style.left = "0px";
+    shadeBottom.style.top = Math.max(0, hole.bottom) + "px";
+    shadeBottom.style.width = vw + "px";
+    shadeBottom.style.height = Math.max(0, vh - hole.bottom) + "px";
+
+    tTitle.textContent = s.title;
+    tText.textContent = s.text;
+    tHint.textContent = s.hint;
+
+    const canNext = (typeof s.require !== "function") || s.require();
+    tNextBtn.disabled = !canNext;
+
+    const bubbleW = Math.min(380, vw - 24);
+    const bubbleX = clamp(hole.left, 12, vw - 12 - bubbleW);
+    let bubbleY = hole.top - 190;
+    if(bubbleY < 12) bubbleY = hole.bottom + 12;
+    bubbleY = clamp(bubbleY, 12, vh - 12 - 220);
+
+    tBubble.style.left = bubbleX + "px";
+    tBubble.style.top = bubbleY + "px";
+  }
+
+  function tutorialNext(){
+    if(!tutorial.active) return;
+    const s = tutorial.steps[tutorial.step];
+    if(s && typeof s.require === "function" && !s.require()){
+      toast("Complete the tutorial action first.", "bad");
+      return;
+    }
+    tutorial.step++;
+    tutorial.autoLock = false;
+    if(tutorial.step >= tutorial.steps.length){
+      tutorialStop();
+      toast("Tutorial complete! Keep building.", "good");
+    } else {
+      tutorialRender();
+    }
+  }
+  function tutorialTryAdvance(){
+    if(!tutorial.active) return;
+    const s = tutorial.steps[tutorial.step];
+    if(!s) return;
+
+    if(typeof s.require === "function") tNextBtn.disabled = !s.require();
+    if(s.autoAdvance && typeof s.require === "function" && s.require() && !tutorial.autoLock){
+      tutorial.autoLock = true;
+      setTimeout(() => tutorialNext(), 280);
+    }
+  }
+
+  tNextBtn.addEventListener("click", tutorialNext);
+  tSkipBtn.addEventListener("click", () => { tutorialStop(); toast("Tutorial skipped.", ""); });
+  window.addEventListener("resize", () => { if(tutorial.active) tutorialRender(); });
+
+  // start
+  playBtn.addEventListener("click", () => {
+    startScreen.style.display = "none";
+    app.style.display = "block";
+    renderSidebar();
+    toast("Click to spawn. Hold to drag. Only valid recipes craft.", "");
+    markActivity();
+    requestAnimationFrame(tick);
+    setTimeout(() => tutorialStart(), 150);
+  });
+
+  // keep nodes in-bounds on resize
+  window.addEventListener("resize", () => {
+    const r = getCanvasRect();
+    for(const n of state.nodes.values()){
+      n.x = clamp(n.x, 0, r.width - NODE);
+      n.y = clamp(n.y, 0, r.height - NODE);
+      n.tx = clamp(n.tx, 0, r.width - NODE);
+      n.ty = clamp(n.ty, 0, r.height - NODE);
+      applyTransform(n);
+    }
+  });
+
+  renderSidebar();
+</script>
+</body>
+</html>
